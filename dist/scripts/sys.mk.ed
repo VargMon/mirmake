@@ -1,0 +1,20 @@
+0a
+# $MirOS: contrib/code/mirmake/dist/scripts/sys.mk.ed,v 1.22 2009/11/17 19:10:30 tg Exp $
+.
+/^.if ..MACHINE_OS/;/^.endif/d
+i
+OStype=		@@ostype@@
+.
+/^OSrev=/d
+/^OSrpl=/d
+/^OScompat=/d
+/^OStriplet?=/s/\(OStriplet?=[	 ]*\).*$/\1@@gnuos@@/
+/^_MIRMAKE_EXE=/s!/usr/bin/make!@@binmk@@/@@bmake@@!
+/^_MIRMAKE_VER=/s/\(_MIRMAKE_VER=[	 ]*\).*$/\1@@vers@@/
+/^CC?=/s/\(CC?=[	 ]*\).*$/\1@@ccom@@/
+/^HOSTCC?=/s/\(CC?=[	 ]*\).*$/\1@@ccom@@/
+/^CPPFLAGS?=/s!$!	-isystem ${.SYSMK:Q} @@dunused@@-include ${.SYSMK:Q}/mirmake.h!
+/^SHELL=/s/\(SHELL=[	 ]*\).*$/\1@@mksh@@/
+/^MAKE?=/s!make!@@bmake@@!
+/^INSTALL?=/s!install!@@binmk@@/binstall!
+wq

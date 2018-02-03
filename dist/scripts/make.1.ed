@@ -1,0 +1,7 @@
+0a
+.\" $MirOS: contrib/code/mirmake/dist/scripts/make.1.ed,v 1.2 2005/11/24 19:30:50 tg Exp $
+.
+%g/^\.Nm make/s//.Nm @@bmake@@/
+%g/@@MKSH@@/s//@@mksh@@/
+%g/.usr.share.mk/s!!@@shmk@@!
+wq

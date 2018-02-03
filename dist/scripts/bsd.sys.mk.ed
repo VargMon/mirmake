@@ -1,0 +1,7 @@
+0a
+# $MirOS: contrib/code/mirmake/dist/scripts/bsd.sys.mk.ed,v 1.4 2009/11/17 19:20:40 tg Exp $
+.
+/mmk-1(/;/mmk-1)/d
+/mmk-2(/;/mmk-2)/d
+/mmk-3(/;/mmk-3)/d
+wq
