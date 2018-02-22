@@ -209,11 +209,12 @@ dodir(char *fn, struct stat *fs, struct stat *ts, int rel)
 	*p++ = '/';
 	n_dirs = fs->st_nlink;
 	while ((dp = readdir(df))) {
-#if defined(__GLIBC__) && !defined(_DIRENT_HAVE_D_NAMLEN)
+#if defined(__GLIBC__) && !defined(_DIRENT_HAVE_D_NAMLEN) || defined(__NO_D_NAMLEN__)
 		size_t d_namlen = strlen(dp->d_name);
 
 		if (d_namlen == 0 || dp->d_name[d_namlen - 1] == '~')
-#else
+#endif
+#if defined(_DIRENT_HAVE_D_NAMLEN)
 		if (dp->d_namlen == 0 || dp->d_name[dp->d_namlen - 1] == '~')
 #endif
 			continue;

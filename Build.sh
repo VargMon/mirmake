@@ -24,10 +24,17 @@
 LC_ALL=C
 export LC_ALL
 
+# Use libbsd and define a few things for musl libc based systems
+CPPFLAGS+="-D__GLIBC__ -D__NO_D_NAMLEN__ -DLIBBSD_OVERLAY -lbsd -I/usr/include/bsd"
+LDFLAGS+="-lbsd"
+export CPPFLAGS
+export LDFLAGS
+
+# mirmake seems a sensible way to avoid conflict with NetBSD's portable bmake
 OSN=$1			# OStype
 PFX=${2:-/usr/local}	# Installation prefix (optional)
 MPT=${3:-man/cat}	# manpath (cat magic) (optional)
-MKN=${4:-bmake}		# name of executable (optional)
+MKN=${4:-mirmake}		# name of executable (optional)
 MAC=$5			# machine (i386, macppc) (optional)
 MAR=$6			# machine_arch (i386, powerpc) (optional)
 MOS=$7			# machine_os (BSD, Darwin, GNU, Interix) (optional)
