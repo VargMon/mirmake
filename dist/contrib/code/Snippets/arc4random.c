@@ -1,5 +1,5 @@
 static const char __vcsid[] = "@(#) MirOS contributed arc4random.c (old)"
-    "\n	@(#)rcsid_master: $MirOS: contrib/code/Snippets/arc4random.c,v 1.27 2010/01/28 16:48:12 tg Exp $"
+    "\n	@(#)rcsid_master: $MirOS: contrib/code/Snippets/arc4random.c,v 1.30 2014/12/20 21:38:07 tg Exp $"
     ;
 
 /*-
@@ -32,7 +32,7 @@ static const char __vcsid[] = "@(#) MirOS contributed arc4random.c (old)"
  */
 
 /*-
- * Copyright (c) 2008, 2009, 2010
+ * Copyright (c) 2008, 2009, 2010, 2012, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  * This is arc4random(3) made more portable,
  * as well as arc4random_pushb(3) for Cygwin.
@@ -56,6 +56,10 @@ static const char __vcsid[] = "@(#) MirOS contributed arc4random.c (old)"
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#if defined(__linux__) && defined(__x86_64__) && defined(__ILP32__)
+/* no sysctl on Linux/x32 */
+#undef HAVE_SYS_SYSCTL_H
+#endif
 #if defined(HAVE_SYS_SYSCTL_H) && HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>
 #endif
@@ -271,10 +275,11 @@ stir_finish(uint8_t av)
 	/*
 	 * Discard early keystream, as per recommendations in:
 	 * http://www.wisdom.weizmann.ac.il/~itsik/RC4/Papers/Rc4_ksa.ps
-	 * We discard 256 words. A long word is 4 bytes.
+	 * "(Not So) Random Shuffles of RC4" by Ilya Mironov says to
+	 * drop at least 256 * 2 bytes, with 256 * 12 being suggested.
 	 * We also discard a randomly fuzzed amount.
 	 */
-	n = 256 * 4 + (arc4_getbyte() & 0x0FU) + (av & 0xF0U);
+	n = 256 * 12 + (arc4_getbyte() & 0x0FU) + (av & 0xF0U);
 	av &= 0x0FU;
 	while (n--)
 		arc4_getbyte();
@@ -567,54 +572,56 @@ arc4random_buf(void *_buf, size_t n)
 	}
 }
 
-/*
- * Calculate a uniformly distributed random number less than upper_bound
- * avoiding "modulo bias".
- *
- * Uniformity is achieved by generating new random numbers until the one
- * returned is outside the range [0, 2**32 % upper_bound).  This
- * guarantees the selected random number will be inside
- * [2**32 % upper_bound, 2**32) which maps back to [0, upper_bound)
- * after reduction modulo upper_bound.
+/*-
+ * Written by Damien Miller.
+ * With simplifications by Jinmei Tatuya.
  */
-u_int32_t
-arc4random_uniform(u_int32_t upper_bound)
+
+/*
+ * Calculate a uniformly distributed random number less than
+ * upper_bound avoiding "modulo bias".
+ *
+ * Uniformity is achieved by generating new random numbers
+ * until the one returned is outside the range
+ * [0, 2^32 % upper_bound[. This guarantees the selected
+ * random number will be inside the range
+ * [2^32 % upper_bound, 2^32[ which maps back to
+ * [0, upper_bound[ after reduction modulo upper_bound.
+ */
+uint32_t
+arc4random_uniform(uint32_t upper_bound)
 {
-	u_int32_t r, min;
+	uint32_t r, min;
 
 	if (upper_bound < 2)
 		return (0);
 
-#if defined(ULONG_MAX) && (ULONG_MAX > 0xffffffffUL)
+#if defined(ULONG_MAX) && (ULONG_MAX > 0xFFFFFFFFUL)
 	min = 0x100000000UL % upper_bound;
 #else
-	/* Calculate (2**32 % upper_bound) avoiding 64-bit math */
-	if (upper_bound > 0x80000000)
-		min = 1 + ~upper_bound;		/* 2**32 - upper_bound */
-	else {
-		/* (2**32 - (x * 2)) % x == 2**32 % x when x <= 2**31 */
-		min = ((0xffffffff - (upper_bound * 2)) + 1) % upper_bound;
-	}
+	/* calculate (2^32 % upper_bound) avoiding 64-bit math */
+	if (upper_bound > 0x80000000U)
+		/* 2^32 - upper_bound (only one "value area") */
+		min = 1 + ~upper_bound;
+	else
+		/* ((2^32 - x) % x) == (2^32 % x) when x <= 2^31 */
+		min = (0xFFFFFFFFU - upper_bound + 1) % upper_bound;
 #endif
 
 	/*
 	 * This could theoretically loop forever but each retry has
 	 * p > 0.5 (worst case, usually far better) of selecting a
 	 * number inside the range we need, so it should rarely need
-	 * to re-roll.
+	 * to re-roll (at all).
 	 */
-	if (!rs_initialized || arc4_stir_pid != getpid())
+	arc4_count -= 4;
+	if (!rs_initialized || arc4_stir_pid != getpid() || arc4_count <= 0)
 		arc4random_stir();
 	if (arc4_getbyte() & 1)
 		(void)arc4_getbyte();
-	for (;;) {
-		arc4_count -= 4;
-		if (arc4_count <= 0)
-			arc4random_stir();
+	do {
 		r = arc4_getword();
-		if (r >= min)
-			break;
-	}
+	} while (r < min);
 
 	return (r % upper_bound);
 }

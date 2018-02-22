@@ -1,7 +1,7 @@
-# $MirOS: contrib/code/mirmake/dist/scripts/Build.sh,v 1.136 2010/06/05 22:27:17 tg Exp $
+# $MirOS: contrib/code/mirmake/dist/scripts/Build.sh,v 1.139 2014/12/20 22:32:59 tg Exp $
 #-
-# Copyright (c) 2006, 2008
-#	Thorsten Glaser <tg@mirbsd.de>
+# Copyright (c) 2006, 2008, 2011, 2013
+#	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
 # are retained or reproduced in an accompanying document, permission
@@ -101,7 +101,6 @@ Darwin:*:*)
 	;;
 Interix:*:*)
 	[[ -z $new_binids ]] && new_binids=-
-	CPPFLAGS="$CPPFLAGS -D_ALL_SOURCE"
 	[[ $new_macarc = i[3456789x]86 ]] && new_macarc=i386
 	/usr/bin/install -c -m 555 $d_script/../contrib/mktemp.sh \
 	    /usr/bin/mktemp
@@ -119,11 +118,12 @@ case $new_machos in
 Darwin)
 	_obfm=Mach-O
 	_rtld=dyld
-	CPPFLAGS="$CPPFLAGS -DHAVE_STRLCPY -DHAVE_STRLCAT"
+	CPPFLAGS="$CPPFLAGS -DHAVE_STRLCPY -DHAVE_STRLCAT -D_DARWIN_C_SOURCE"
 	;;
 *Interix)
 	_obfm=PE
 	_rtld=GNU
+	CPPFLAGS="$CPPFLAGS -D_ALL_SOURCE"
 	;;
 BSD)
 	# MirOS BSD
@@ -156,6 +156,7 @@ GNU)
 	# namespace uses; just make sure __unused is not used in code
 	# we intend to port, otherwise it may break on GNU/Linux
 	dunused='-D__unused=__unused '
+	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 	;;
 esac
 
@@ -253,8 +254,8 @@ cat >_t.c <<-'EOF'
 	#include <string.h>
 	#undef __attribute__
 	int xcopy(const void *, void *, size_t)
-	    __attribute__((bounded (buffer, 1, 3)))
-	    __attribute__((bounded (buffer, 2, 3)));
+	    __attribute__((__bounded__(__buffer__, 1, 3)))
+	    __attribute__((__bounded__(__buffer__, 2, 3)));
 	int main(int ac, char *av[]) { return (xcopy(av[0], av[--ac], 1)); }
 	int xcopy(const void *s, void *d, size_t n) {
 		memmove(d, s, n); return (n);
@@ -509,7 +510,8 @@ sed -e 's/hashinc/tiger.h/g' -e 's/HASH/TIGER/g' \
     $d_src/lib/libc/hash/helper.c >tigerhl.c
 sed -e 's/hashinc/whirlpool.h/g' -e 's/HASH/WHIRLPOOL/g' \
     $d_src/lib/libc/hash/helper.c >whirlpoolhl.c
-cp  $d_src/lib/libc/hash/{adh32,md4,md5,rmd160,sfv,sha1,sha2,suma,tiger,whirlpool,hashpad,digits}.c \
+cp  $d_src/lib/libc/hash/{adh32,md4,md5,rmd160,sfv,sha1,sha2,suma,tiger,whirlpool}.c \
+    $d_src/kern/c/miscdata.c \
     $d_src/lib/libc/hash/suma-i386.S \
     $d_src/lib/libc/stdlib/{getopt_long,strtoll}.c \
     $d_src/lib/libc/stdio/{{,v}asprintf,mktemp}.c .

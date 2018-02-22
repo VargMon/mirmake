@@ -1,7 +1,7 @@
-/* $MirOS: src/kern/include/libckern.h,v 1.22 2010/01/10 20:18:50 tg Exp $ */
+/* $MirOS: src/kern/include/libckern.h,v 1.38 2014/11/30 21:30:56 tg Exp $ */
 
 /*-
- * Copyright (c) 2008, 2010
+ * Copyright (c) 2008, 2010, 2011, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -62,8 +62,21 @@ typedef	__WINT_TYPE__	wint_t;
 typedef struct {
 	unsigned int count:2;
 	unsigned int value:12;
-} __attribute__((packed)) mbstate_t;
+} __attribute__((__packed__)) mbstate_t;
 #endif
+
+/**
+ * An arcfour_status is hereby defined as carrying
+ * 212 octets (1696 bit) of entropic state, whereas
+ * S contains 210 octets and 3 or 4 additioinal bit,
+ * i is another 8 bit, and j adds enough to make up
+ * for the 4-5 bit of additional entropy we assume.
+ */
+struct arcfour_status {
+	uint8_t S[256];
+	uint8_t i;
+	uint8_t j;
+};
 
 #undef WCHAR_MIN
 #define WCHAR_MIN	0
@@ -81,61 +94,74 @@ typedef struct {
 __BEGIN_DECLS
 void __main(void);
 
+void arc4random_roundhash(uint32_t *, uint8_t *, const void *, size_t)
+    __attribute__((__bounded__(__minbytes__, 1, 128)))
+    __attribute__((__bounded__(__buffer__, 3, 4)));
+/* u_int32_t in the original API, but we pray they're the same */
+uint32_t arc4random_uniform(uint32_t);
+
+/* arcfour: base cipher */
+void arcfour_init(struct arcfour_status *);
+void arcfour_ksa(struct arcfour_status *, const uint8_t *, size_t)
+    __attribute__((__bounded__(__buffer__, 2, 3)));
+uint8_t arcfour_byte(struct arcfour_status *);
+
 int bcmp(const void *, const void *, size_t)
-    __attribute__((bounded (buffer, 1, 3)))
-    __attribute__((bounded (buffer, 2, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)))
+    __attribute__((__bounded__(__buffer__, 2, 3)));
 void bcopy(const void *, void *, size_t)
-    __attribute__((bounded (buffer, 1, 3)))
-    __attribute__((bounded (buffer, 2, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)))
+    __attribute__((__bounded__(__buffer__, 2, 3)));
 void bzero(void *, size_t)
-    __attribute__((bounded (buffer, 1, 2)));
+    __attribute__((__bounded__(__buffer__, 1, 2)));
+void explicit_bzero(void *, size_t)
+    __attribute__((__bounded__(__buffer__, 1, 2)));
 
 int ffs(int);
 
 void *memchr(const void *, int, size_t)
-    __attribute__((bounded (buffer, 1, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)));
 int memcmp(const void *, const void *, size_t)
-    __attribute__((bounded (buffer, 1, 3)))
-    __attribute__((bounded (buffer, 2, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)))
+    __attribute__((__bounded__(__buffer__, 2, 3)));
 void *memcpy(void *, const void *, size_t)
-    __attribute__((bounded (buffer, 1, 3)))
-    __attribute__((bounded (buffer, 2, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)))
+    __attribute__((__bounded__(__buffer__, 2, 3)));
 void memhexdump(const void *, size_t, size_t);
 void *memmove(void *, const void *, size_t)
-    __attribute__((bounded (buffer, 1, 3)))
-    __attribute__((bounded (buffer, 2, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)))
+    __attribute__((__bounded__(__buffer__, 2, 3)));
 void *mempcpy(void *, const void *, size_t)
-    __attribute__((bounded (buffer, 1, 3)))
-    __attribute__((bounded (buffer, 2, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)))
+    __attribute__((__bounded__(__buffer__, 2, 3)));
 void *memset(void *, int, size_t)
-    __attribute__((bounded (buffer, 1, 3)));
+    __attribute__((__bounded__(__buffer__, 1, 3)));
 
-uint32_t OAAT0Update(register uint32_t, register const uint8_t *,
-    register size_t) __attribute__((bounded (string, 2, 3)));
-uint32_t OAAT0Final(register uint32_t);
-
-size_t optu16to8(char * __restrict__, wchar_t, mbstate_t * __restrict__)
-    __attribute__((bounded (minbytes, 1, 5)));
-size_t optu8to16(wchar_t * __restrict__, const char * __restrict__,
-    size_t, mbstate_t * __restrict__)
-    __attribute__((bounded (string, 2, 3)));
+size_t optu16to8(char *, wchar_t, mbstate_t *)
+    __attribute__((__bounded__(__minbytes__, 1, 5)));
+size_t optu8to16(wchar_t *, const char *, size_t, mbstate_t *)
+    __attribute__((__bounded__(__string__, 2, 3)));
 
 int strcasecmp(const char *, const char *);
+char *strchr(const char *, int);
 int strcmp(const char *, const char *);
 int strcoll(const char *, const char *);
 size_t strlcat(char *, const char *, size_t)
-    __attribute__((bounded (string, 1, 3)));
+    __attribute__((__bounded__(__string__, 1, 3)));
 size_t strlcpy(char *, const char *, size_t)
-    __attribute__((bounded (string, 1, 3)));
+    __attribute__((__bounded__(__string__, 1, 3)));
 size_t strlen(const char *);
 int strncasecmp(const char *, const char *, size_t);
 int strncmp(const char *, const char *, size_t);
+char *strncpy(char *, const char *, size_t)
+    __attribute__((__bounded__(__string__, 1, 3)));
+char *strrchr(const char *, int);
 size_t strxfrm(char *, const char *, size_t)
-    __attribute__((bounded (string, 1, 3)));
+    __attribute__((__bounded__(__string__, 1, 3)));
 
 #ifdef _KERN_HOSTED
-size_t wcrtomb(char * __restrict__, wchar_t, mbstate_t * __restrict__)
-    __attribute__((bounded (minbytes, 1, 5)));
+size_t wcrtomb(char *, wchar_t, mbstate_t *)
+    __attribute__((__bounded__(__minbytes__, 1, 5)));
 #endif
 int wcscasecmp(const wchar_t *, const wchar_t *);
 int wcscmp(const wchar_t *, const wchar_t *);
@@ -208,13 +234,18 @@ __END_DECLS
 	u_long ulmin_a = (a), ulmin_b = (b);		\
 	(ulmin_a < ulmin_b ? ulmin_a : ulmin_b);	\
 })
+
+#ifndef _STDLIB_H_abs_DEFINED
+#undef abs
+__BEGIN_DECLS
+int abs(int);
+__END_DECLS
+#define _STDLIB_H_abs_DEFINED
 #define abs(j) __extension__({				\
 	int abs_j = (j);				\
 	(abs_j < 0 ? -abs_j : abs_j);			\
 })
-
-#define __strong_alias(alias,sym)			\
-	__asm__(".globl " __STRING(alias) "; " __STRING(alias) " = " __STRING(sym))
+#endif
 
 #endif /* __GNUC__ */
 

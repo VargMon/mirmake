@@ -1,7 +1,7 @@
 #!/bin/sh
-# $MirOS: contrib/code/mirmake/dist/scripts/Copy.sh,v 1.33 2009/11/09 22:40:59 tg Exp $
+# $MirOS: contrib/code/mirmake/dist/scripts/Copy.sh,v 1.39 2014/12/20 22:35:51 tg Exp $
 
-wd=$(realpath $(dirname $0))
+wd=$(realpath "$0/..")
 version=$(date +%Y%m%d)
 echo version=$version >$wd/Version.sh
 
@@ -10,17 +10,17 @@ rm -rf src
 cvs -Rqd ${CVSROOT:-/cvs} co -PA \
     contrib/code/Snippets/arc4random.c \
     contrib/gnu/config/config.guess \
-    src/bin/mksh/setmode.c \
+    src/kern/include/md5.h \
     src/usr.bin/lndir src/usr.bin/xinstall \
     src/usr.bin/make src/usr.bin/mkdep src/usr.bin/lorder \
     src/usr.bin/tsort \
     src/include/getopt.h src/include/ohash.h src/include/sysexits.h \
     src/include/stdbool.h \
-    src/include/adler32.h src/include/md4.h src/include/md5.h \
+    src/include/adler32.h src/include/md4.h \
     src/include/rmd160.h src/include/sfv.h src/include/sha1.h \
     src/include/sha2.h src/include/suma.h src/include/tiger.h \
     src/include/whirlpool.h src/kern/include/libckern.h \
-    src/kern/c/strlfun.c \
+    src/kern/c/miscdata.c src/kern/c/strlfun.c \
     src/lib/libc/hash src/lib/libc/ohash \
     src/lib/libc/stdio/asprintf.c src/lib/libc/stdio/vasprintf.c \
     src/lib/libc/stdio/mktemp.c \
@@ -31,11 +31,13 @@ cvs -Rqd ${CVSROOT:-/cvs} co -PA \
     src/share/mk/bsd.obj.mk src/share/mk/bsd.own.mk \
     src/share/mk/bsd.prog.mk src/share/mk/bsd.subdir.mk \
     src/share/mk/bsd.sys.mk src/share/mk/sys.mk
+mv src/kern/include/md5.h src/include/
+cvs -Rqd ${CVSROOT:-/cvs} co -r1.15 src/bin/mksh/setmode.c
 top=$(dirname $(pwd))
 topd=$(dirname $top)
 topf=$(basename $top)
 cd $topd
 find $topf -type f | xargs chmod 644
-find $topf -type f ! -path \*CVS\* | sort | cpio -oHdist \
-    | gzip -n9 >mirmake-$version.cpio.gz
+find $topf -type f ! -path \*CVS\* | sort | cpio -oC512 -Hustar -Mdist | \
+    gzip -n9 >mirmake_$version.orig.tar.gz
 [ -n "$DEBUG" ] || rm -rf $wd/../src $wd/Version.sh $wd/../contrib/gnu

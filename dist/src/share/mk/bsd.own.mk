@@ -1,4 +1,4 @@
-# $MirOS: src/share/mk/bsd.own.mk,v 1.61 2010/01/06 19:07:38 tg Exp $
+# $MirOS: src/share/mk/bsd.own.mk,v 1.64 2014/11/26 19:29:29 tg Exp $
 # $OpenBSD: bsd.own.mk,v 1.92 2005/01/18 00:28:42 mickey Exp $
 # $NetBSD: bsd.own.mk,v 1.24 1996/04/13 02:08:09 thorpej Exp $
 
@@ -12,9 +12,9 @@ BSD_OWN_MK=1
 .  include "/etc/${MAKE:T}.cfg"
 .endif
 
-SKEY?=		Yes	# no = avoid building with support for S/key auth
+SKEY?=		Yes	# no = avoid building with support for S/Key auth
 DEBUGLIBS?=	Yes	# yes (snapshots), no (releases), removed (mirmake)
-MALLOC_TYPE?=	mmap	# default: mmap, other: brk
+MALLOC_TYPE?=	omalloc	# default: omalloc, other: brk, mmap
 
 CROSS_MODE?=	No
 .if !make(obj) && (${CROSS_MODE:L} == "yes")
@@ -43,8 +43,6 @@ CFLAGS+=	-Wall -Wextra -Wunused -Wdeclaration-after-statement -Wundef \
 WARNINGS?=		No
 # Set to yes to build shared libraries with basic debugging information
 DEBUGLIBS?=		No	# yes, we have this twice
-# Set to yes for a stricter patent policy (USA and OpenBSD only)
-MKC_USAP?=		No
 # Set to sudo to automatically switch to root and only if needed
 SUDO?=
 # where the system object and source trees are kept; can be configurable
@@ -184,6 +182,7 @@ LIBKEYNOTE?=	${DESTDIR}/usr/lib/libkeynote.a
 LIBKVM?=	${DESTDIR}/usr/lib/libkvm.a
 LIBL?=		${DESTDIR}/usr/lib/libl.a
 LIBM?=		${DESTDIR}/usr/lib/libm.a
+LIBMBFUN?=	${DESTDIR}/usr/lib/libmbfun.a
 LIBMDSUP?=	${DESTDIR}/usr/lib/libmdsup.a
 LIBMENU?=	${DESTDIR}/usr/lib/libmenu.a
 LIBMILTER?=	${DESTDIR}/usr/lib/libmilter.a
